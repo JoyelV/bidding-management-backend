@@ -19,6 +19,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.18",
     "@types/express": "^5.0.2",
+    "@types/formidable": "^3.4.5",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.15.19",
     "@types/nodemailer": "^6.4.17",
@@ -29,9 +30,11 @@
   "dependencies": {
     "@prisma/client": "^6.8.2",
     "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.6.1",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "formidable": "^3.5.4",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^7.0.3"
   }

@@ -33,8 +33,7 @@ export const signup = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
-  console.log(req.body,"req.body");
-  
+
   if (!email || !password) {
      res.status(400).json({ error: 'Email and password are required' });
      return
@@ -43,24 +42,26 @@ export const login = async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-       res.status(401).json({ error: 'Invalid credentials' });
+       res.status(404).json({ error: 'User not found' });
        return
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-       res.status(401).json({ error: 'Invalid credentials' });
+       res.status(401).json({ error: 'Invalid password' });
        return
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET as string, {
-      expiresIn: '1h',
-    });
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'your_jwt_secret',
+      { expiresIn: '1h' }
+    );
 
     res.json({ token });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Failed to log in' });
   }
 };
 

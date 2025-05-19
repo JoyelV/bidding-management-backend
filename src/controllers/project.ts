@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { sendEmail } from '../utils/email';
+import { uploadFile } from '../utils/cloudinary';
+import fs from 'fs';
 
 const prisma = new PrismaClient();
 
@@ -75,23 +77,16 @@ export const getProjectById = async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    const project = await prisma.project.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        buyer: {
-          select: { id: true, name: true, email: true },
-        },
-        bids: {
-          include: {
-            seller: {
-              select: { id: true, name: true, email: true },
-            },
-          },
-          orderBy: { createdAt: 'desc' },
-        },
-      },
-    });
-
+const project = await prisma.project.findUnique({
+  where: { id: parseInt(id) },
+  include: {
+    buyer: { select: { id: true, name: true, email: true } },
+    bids: { include: { seller: { select: { id: true, name: true, email: true } } } },
+    selectedBid: { include: { seller: { select: { id: true, name: true, email: true } } } },
+    deliverables: { include: { seller: { select: { id: true, name: true, email: true } } } },
+  },
+});
+console.log('Fetched project:', project); // Add this log
     if (!project) {
        res.status(404).json({ error: 'Project not found' });
        return
@@ -340,6 +335,7 @@ export const selectBid = async (req: AuthRequest, res: Response) => {
         },
       },
     });
+    console.log(updatedProject,"updatedProject");
 
     // Send email notification to the selected seller
     const emailSubject = `You've been selected for the project: ${project.title}`;
@@ -350,5 +346,187 @@ export const selectBid = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to select bid' });
+  }
+};
+
+export const submitDeliverable = async (req: AuthRequest, res: Response) => {
+  let { projectId } = req.body; // `projectId` might be an array (['3'])
+  console.log(projectId, "projectId");
+  const sellerId = req.user?.userId;
+  const filePath = req.filePath;
+  console.log('File Path:', req.filePath);
+
+  if (!sellerId) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  // Handle projectId as an array or single value
+  if (Array.isArray(projectId)) {
+    projectId = projectId[0]; // Take the first element if it's an array
+  }
+
+  if (!projectId || !filePath) {
+    if (filePath) fs.unlinkSync(filePath);
+    res.status(400).json({ error: 'Project ID and file are required' });
+    return;
+  }
+
+  if (typeof filePath !== 'string') {
+    if (filePath) fs.unlinkSync(filePath);
+    res.status(500).json({ error: 'File path is invalid' });
+    return;
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: sellerId } });
+    if (!user || user.role !== 'SELLER') {
+      if (filePath) fs.unlinkSync(filePath);
+      res.status(403).json({ error: 'Only sellers can submit deliverables' });
+      return;
+    }
+    console.log('user:', user);
+
+    const parsedProjectId = typeof projectId === 'string' || typeof projectId === 'number' ? parseInt(projectId as string) : null;
+    if (!parsedProjectId || isNaN(parsedProjectId)) {
+      if (filePath) fs.unlinkSync(filePath);
+      res.status(400).json({ error: 'Invalid Project ID' });
+      return;
+    }
+    console.log('parsedProjectId:', parsedProjectId);
+
+    const project = await prisma.project.findUnique({
+      where: { id: parsedProjectId },
+      include: { selectedBid: true },
+    });
+    if (!project) {
+      if (filePath) fs.unlinkSync(filePath);
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+    console.log('project:', project);
+
+    if (project.status !== 'ASSIGNED') {
+      if (filePath) fs.unlinkSync(filePath);
+      res.status(400).json({ error: 'Project is not in ASSIGNED status' });
+      return;
+    }
+
+    if (!project.selectedBid || project.selectedBid.sellerId !== sellerId) {
+      if (filePath) fs.unlinkSync(filePath);
+      res.status(403).json({ error: 'You are not the selected seller for this project' });
+      return;
+    }
+
+    const fileUrl = await uploadFile(filePath, 'project-deliverables');
+    console.log('fileUrl:', fileUrl);
+
+    if (filePath) fs.unlinkSync(filePath);
+
+    const deliverable = await prisma.deliverable.create({
+      data: {
+        fileUrl,
+        projectId: project.id,
+        sellerId,
+      },
+      include: {
+        seller: { select: { id: true, name: true, email: true } },
+      },
+    });
+    console.log('deliverable:', deliverable);
+
+    res.status(201).json({ deliverable });
+  } catch (error) {
+    if (filePath) fs.unlinkSync(filePath);
+    console.error(error);
+    res.status(500).json({ error: 'Failed to submit deliverable' });
+  }
+};
+
+export const completeProject = async (req: AuthRequest, res: Response) => {
+  const { projectId } = req.body;
+  const buyerId = req.user?.userId;
+
+  if (!buyerId) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  if (!projectId) {
+    res.status(400).json({ error: 'Project ID is required' });
+    return;
+  }
+
+  // Ensure projectId is a string or number and convert it to a number
+  const parsedProjectId = typeof projectId === 'string' || typeof projectId === 'number' ? parseInt(projectId as string) : null;
+  if (!parsedProjectId || isNaN(parsedProjectId)) {
+    res.status(400).json({ error: 'Invalid Project ID' });
+    return;
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: buyerId } });
+    if (!user || user.role !== 'BUYER') {
+      res.status(403).json({ error: 'Only buyers can mark projects as completed' });
+      return;
+    }
+
+    const project = await prisma.project.findUnique({
+      where: { id: parsedProjectId },
+      include: {
+        buyer: true,
+        selectedBid: { include: { seller: true } },
+        deliverables: true,
+      },
+    });
+    if (!project) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    if (project.buyerId !== buyerId) {
+      res.status(403).json({ error: 'You can only complete your own projects' });
+      return;
+    }
+
+    if (project.status !== 'ASSIGNED') {
+      res.status(400).json({ error: 'Project is not in ASSIGNED status' });
+      return;
+    }
+
+    if (project.deliverables.length === 0) {
+      res.status(400).json({ error: 'Cannot complete project without deliverables' });
+      return;
+    }
+
+    // Ensure selectedBid and seller exist before sending email
+    if (!project.selectedBid || !project.selectedBid.seller) {
+      res.status(400).json({ error: 'No selected bid or seller found for this project' });
+      return;
+    }
+
+    const updatedProject = await prisma.project.update({
+      where: { id: project.id },
+      data: { status: 'COMPLETED' },
+      include: {
+        buyer: { select: { id: true, name: true, email: true } },
+        selectedBid: { include: { seller: { select: { id: true, name: true, email: true } } } },
+      },
+    });
+
+    // Notify seller
+    const sellerEmailSubject = `Project Completed: ${project.title}`;
+    const sellerEmailText = `Dear ${project.selectedBid.seller.name},\n\nThe project "${project.title}" has been marked as completed by ${user.name} (${user.email}).\n\nThank you for your work!\n\nBest regards,\nBidding System Team`;
+    await sendEmail(project.selectedBid.seller.email, sellerEmailSubject, sellerEmailText);
+
+    // Notify buyer
+    const buyerEmailSubject = `Project Completed: ${project.title}`;
+    const buyerEmailText = `Dear ${user.name},\n\nYou have successfully marked the project "${project.title}" as completed.\n\nThank you for using our platform!\n\nBest regards,\nBidding System Team`;
+    await sendEmail(user.email, buyerEmailSubject, buyerEmailText);
+
+    res.json({ project: updatedProject });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to complete project' });
   }
 };

@@ -1,44 +1,39 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
 
-// Extend the Express Request type to include user data
-export interface AuthRequest extends Request {
-  user?: { userId: number };
+interface AuthRequest extends Request {
+  user?: { userId: number; email: string; role: string };
+  filePath?: string;
 }
 
-const prisma = new PrismaClient();
+const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const token = req.headers.authorization?.split(' ')[1]; // Extract token from "Bearer <token>"
 
-export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (!token) {
+     res.status(401).json({ error: 'No token provided' });
+     return
+  }
+
   try {
-    // Get the token from the Authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-       res.status(401).json({ error: 'No token provided' });
-       return;
-    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret') as {
+      userId: number;
+      email: string;
+      role: string;
+    };
 
-    const token = authHeader.split(' ')[1]; // Extract the token (Bearer <token>)
+    // Assign user with all required properties
+    req.user = {
+      userId: decoded.userId,
+      email: decoded.email,
+      role: decoded.role,
+    };
 
-    // Verify the token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: number };
-
-    // Check if the user exists in the database
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-    });
-
-    if (!user) {
-       res.status(401).json({ error: 'User not found' });
-       return;
-    }
-
-    // Attach user data to the request object
-    req.user = { userId: decoded.userId };
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    console.error('JWT verification failed:', error);
      res.status(401).json({ error: 'Invalid token' });
-     return;
+     return
   }
 };
+
+export { AuthRequest, authMiddleware };

@@ -8,30 +8,32 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  name      String
-  role      Role     @default(BUYER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  projects  Project[]
-  bids      Bid[]
+  id           Int          @id @default(autoincrement())
+  email        String       @unique
+  password     String
+  name         String
+  role         Role         @default(BUYER)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  projects     Project[]
+  bids         Bid[]
+  deliverables Deliverable[]
 }
 
 model Project {
-  id            Int      @id @default(autoincrement())
+  id            Int           @id @default(autoincrement())
   title         String
   description   String
   budgetMin     Float
   budgetMax     Float
   deadline      DateTime
   buyerId       Int
-  buyer         User     @relation(fields: [buyerId], references: [id])
+  buyer         User          @relation(fields: [buyerId], references: [id])
   bids          Bid[]
   status        ProjectStatus @default(OPEN)
-  selectedBidId Int?          @unique // Add @unique to ensure one-to-one relation
+  selectedBidId Int?          @unique
   selectedBid   Bid?          @relation("SelectedBid", fields: [selectedBidId], references: [id])
+  deliverables  Deliverable[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 }
@@ -46,7 +48,18 @@ model Bid {
   seller          User     @relation(fields: [sellerId], references: [id])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  selectedProject Project? @relation("SelectedBid") // One-to-one relation with Project
+  selectedProject Project? @relation("SelectedBid")
+}
+
+model Deliverable {
+  id        Int      @id @default(autoincrement())
+  fileUrl   String   // URL of the uploaded file (e.g., PDF on Cloudinary)
+  projectId Int
+  project   Project  @relation(fields: [projectId], references: [id])
+  sellerId  Int
+  seller    User     @relation(fields: [sellerId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum Role {

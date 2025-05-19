@@ -20,7 +20,7 @@ This repository contains the backend of the Project Bidding Platform, a web appl
 - **User Authentication**: JWT-based authentication for registering, logging in, and managing users.
 - **Project Management**: CRUD operations for projects (create, read, update, delete).
 - **Bidding System**: Sellers can place bids with amounts and estimated completion times; buyers can select bids.
-- **Email Notifications**: Sends emails to sellers when their bid is selected (using SendGrid).
+- **Email Notifications**: Sends emails to sellers when their bid is selected (using Nodemailer).
 - **Database Management**: Uses Prisma ORM with PostgreSQL for data persistence.
 - **Role-Based Logic**: Enforces role-based access (buyer/seller) for specific actions.
 
@@ -49,10 +49,8 @@ The backend was designed with scalability and security in mind:
 ├── src/
 │   ├── config/
 │   │   └── email.js       # Email configuration (Nodemailer setup)
-│   ├── routes/
-│   │   ├── bids.js        # Bid-related routes (create, fetch, select)
-│   │   ├── notify.js      # Notification routes (send emails to sellers)
-│   │   ├── projects.js    # Project-related routes
+│   ├── routes/ 
+│   │   ├── projects.js    # Project-related routes,Bid-related routes (create, fetch, select),Notification routes (send emails tosellers)
 │   │   └── users.js       # User-related routes (auth)
 │   └── index.js           # Main Express app (entry point)
 ├── package.json           # Dependencies and scripts
@@ -173,11 +171,6 @@ The backend was designed with scalability and security in mind:
   - `POST /api/projects`: Create a project (buyer only).
   - `GET /api/projects/:id`: Get project details.
   - `GET /api/projects/:id/bids`: Get all bids for a project.
-- **Bids**:
-  - `POST /api/bids`: Place a bid (seller only).
-  - `POST /api/bids/:id/select`: Select a bid (buyer only).
-- **Notifications**:
-  - `POST /api/notify-seller`: Send an email to a seller (triggered by bid selection).
 
 ## Related Repositories
 - **Frontend**: [Project-Bidding-Frontend](#) (replace with the actual repo URL)

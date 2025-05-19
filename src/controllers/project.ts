@@ -223,3 +223,52 @@ export const updateBid = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to update bid' });
   }
 };
+
+export const deleteBid = async (req: AuthRequest, res: Response) => {
+  const { bidId } = req.body;
+  const sellerId = req.user?.userId;
+
+  if (!sellerId) {
+     res.status(401).json({ error: 'Unauthorized' });
+     return;
+  }
+
+  if (!bidId) {
+     res.status(400).json({ error: 'Bid ID is required' });
+     return;
+  }
+
+  try {
+    // Check if the bid exists and belongs to the seller
+    const bid = await prisma.bid.findUnique({
+      where: { id: bidId },
+      include: { project: true },
+    });
+
+    if (!bid) {
+       res.status(404).json({ error: 'Bid not found' });
+       return;
+    }
+
+    if (bid.sellerId !== sellerId) {
+       res.status(403).json({ error: 'You can only delete your own bids' });
+       return;
+    }
+
+    // Check if the project's bidding deadline has passed
+    if (new Date(bid.project.deadline) < new Date()) {
+       res.status(400).json({ error: 'Project bidding deadline has passed' });
+       return;
+    }
+
+    // Delete the bid
+    await prisma.bid.delete({
+      where: { id: bidId },
+    });
+
+    res.json({ message: 'Bid deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to delete bid' });
+  }
+};

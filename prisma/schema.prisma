@@ -12,7 +12,35 @@ model User {
   email     String   @unique
   password  String
   name      String
-  role      Role
+  role      Role     @default(BUYER) // Default to BUYER
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  projects  Project[] // Projects created by this user (buyer)
+  bids      Bid[]     // Bids placed by this user (seller)
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  budgetMin   Float
+  budgetMax   Float
+  deadline    DateTime
+  buyerId     Int
+  buyer       User     @relation(fields: [buyerId], references: [id])
+  bids        Bid[]     // Bids placed on this project
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Bid {
+  id        Int      @id @default(autoincrement())
+  amount    Float
+  message   String?  @default("")
+  projectId Int
+  project   Project  @relation(fields: [projectId], references: [id])
+  sellerId  Int
+  seller    User     @relation(fields: [sellerId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

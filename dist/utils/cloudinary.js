@@ -17,17 +17,10 @@ cloudinary_1.v2.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 const uploadFile = (filePath, folder) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const result = yield cloudinary_1.v2.uploader.upload(filePath, {
-            folder,
-            resource_type: 'auto', // Automatically detect file type (e.g., PDF)
-        });
-        return result.secure_url;
-    }
-    catch (error) {
-        console.error('Cloudinary upload error:', error);
-        throw new Error('Failed to upload file to Cloudinary');
-    }
+    const result = yield cloudinary_1.v2.uploader.upload(filePath, {
+        folder,
+        resource_type: 'auto',
+    });
+    return result.secure_url;
 });
 exports.uploadFile = uploadFile;
-exports.default = cloudinary_1.v2;

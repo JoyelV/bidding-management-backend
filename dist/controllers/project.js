@@ -87,19 +87,13 @@ const getProjectById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const project = yield prisma.project.findUnique({
             where: { id: parseInt(id) },
             include: {
-                buyer: {
-                    select: { id: true, name: true, email: true },
-                },
-                bids: {
-                    include: {
-                        seller: {
-                            select: { id: true, name: true, email: true },
-                        },
-                    },
-                    orderBy: { createdAt: 'desc' },
-                },
+                buyer: { select: { id: true, name: true, email: true } },
+                bids: { include: { seller: { select: { id: true, name: true, email: true } } } },
+                selectedBid: { include: { seller: { select: { id: true, name: true, email: true } } } },
+                deliverables: { include: { seller: { select: { id: true, name: true, email: true } } } },
             },
         });
+        console.log('Fetched project:', project); // Add this log
         if (!project) {
             res.status(404).json({ error: 'Project not found' });
             return;
@@ -325,6 +319,7 @@ const selectBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 },
             },
         });
+        console.log(updatedProject, "updatedProject");
         // Send email notification to the selected seller
         const emailSubject = `You've been selected for the project: ${project.title}`;
         const emailText = `Dear ${bid.seller.name},\n\nCongratulations! Your bid of $${bid.amount} has been selected for the project "${project.title}" by ${user.name} (${user.email}).\n\nPlease get in touch with the buyer to proceed.\n\nBest regards,\nBidding System Team`;
@@ -339,56 +334,75 @@ const selectBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 exports.selectBid = selectBid;
 const submitDeliverable = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
-    const { projectId } = req.body;
+    let { projectId } = req.body; // `projectId` might be an array (['3'])
+    console.log(projectId, "projectId");
     const sellerId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
     const filePath = req.filePath;
+    console.log('File Path:', req.filePath);
     if (!sellerId) {
         res.status(401).json({ error: 'Unauthorized' });
         return;
     }
+    // Handle projectId as an array or single value
+    if (Array.isArray(projectId)) {
+        projectId = projectId[0]; // Take the first element if it's an array
+    }
     if (!projectId || !filePath) {
+        if (filePath)
+            fs_1.default.unlinkSync(filePath);
         res.status(400).json({ error: 'Project ID and file are required' });
         return;
     }
-    // Type guard to ensure filePath is a string
     if (typeof filePath !== 'string') {
+        if (filePath)
+            fs_1.default.unlinkSync(filePath);
         res.status(500).json({ error: 'File path is invalid' });
         return;
     }
     try {
         const user = yield prisma.user.findUnique({ where: { id: sellerId } });
         if (!user || user.role !== 'SELLER') {
+            if (filePath)
+                fs_1.default.unlinkSync(filePath);
             res.status(403).json({ error: 'Only sellers can submit deliverables' });
             return;
         }
-        // Add type checking for projectId
+        console.log('user:', user);
         const parsedProjectId = typeof projectId === 'string' || typeof projectId === 'number' ? parseInt(projectId) : null;
         if (!parsedProjectId || isNaN(parsedProjectId)) {
-            fs_1.default.unlinkSync(filePath);
+            if (filePath)
+                fs_1.default.unlinkSync(filePath);
             res.status(400).json({ error: 'Invalid Project ID' });
             return;
         }
+        console.log('parsedProjectId:', parsedProjectId);
         const project = yield prisma.project.findUnique({
             where: { id: parsedProjectId },
             include: { selectedBid: true },
         });
         if (!project) {
-            fs_1.default.unlinkSync(filePath);
+            if (filePath)
+                fs_1.default.unlinkSync(filePath);
             res.status(404).json({ error: 'Project not found' });
             return;
         }
+        console.log('project:', project);
         if (project.status !== 'ASSIGNED') {
-            fs_1.default.unlinkSync(filePath);
+            if (filePath)
+                fs_1.default.unlinkSync(filePath);
             res.status(400).json({ error: 'Project is not in ASSIGNED status' });
             return;
         }
         if (!project.selectedBid || project.selectedBid.sellerId !== sellerId) {
-            fs_1.default.unlinkSync(filePath);
+            if (filePath)
+                fs_1.default.unlinkSync(filePath);
             res.status(403).json({ error: 'You are not the selected seller for this project' });
             return;
         }
         const fileUrl = yield (0, cloudinary_1.uploadFile)(filePath, 'project-deliverables');
-        fs_1.default.unlinkSync(filePath);
+        console.log('fileUrl:', fileUrl);
+        if (filePath)
+            fs_1.default.unlinkSync(filePath);
         const deliverable = yield prisma.deliverable.create({
             data: {
                 fileUrl,
@@ -399,6 +413,7 @@ const submitDeliverable = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 seller: { select: { id: true, name: true, email: true } },
             },
         });
+        console.log('deliverable:', deliverable);
         res.status(201).json({ deliverable });
     }
     catch (error) {

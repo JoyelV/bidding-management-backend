@@ -12,6 +12,6 @@ router.post('/bid', auth_1.authMiddleware, project_1.createBid);
 router.put('/bid', auth_1.authMiddleware, project_1.updateBid);
 router.delete('/bid', auth_1.authMiddleware, project_1.deleteBid);
 router.post('/select-bid', auth_1.authMiddleware, project_1.selectBid);
-router.post('/deliver', auth_1.authMiddleware, fileUpload_1.fileUploadMiddleware, project_1.submitDeliverable); // Add deliverable endpoint
-router.post('/complete', auth_1.authMiddleware, project_1.completeProject); // Add complete project endpoint
+router.post('/deliver', auth_1.authMiddleware, fileUpload_1.fileUploadMiddleware, project_1.submitDeliverable);
+router.post('/complete', auth_1.authMiddleware, project_1.completeProject);
 exports.default = router;

@@ -9,7 +9,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:migrate:prod": "prisma migrate deploy",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "prisma generate"
   },
   "keywords": [],
   "author": "",
@@ -37,5 +38,9 @@
     "formidable": "^3.5.4",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^7.0.3"
-  }
+  },
+  "engines": {
+  "node": "20.11.0",
+  "npm": "10.9.2"
+}
 }

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
+import { sendEmail } from '../utils/email';
 
 const prisma = new PrismaClient();
 
@@ -270,5 +271,84 @@ export const deleteBid = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to delete bid' });
+  }
+};
+
+export const selectBid = async (req: AuthRequest, res: Response) => {
+  const { projectId, bidId } = req.body;
+  const buyerId = req.user?.userId;
+
+  if (!buyerId) {
+     res.status(401).json({ error: 'Unauthorized' });
+     return;
+  }
+
+  if (!projectId || !bidId) {
+     res.status(400).json({ error: 'Project ID and Bid ID are required' });
+     return;
+  }
+
+  try {
+    // Check if the user is a BUYER
+    const user = await prisma.user.findUnique({ where: { id: buyerId } });
+    if (!user || user.role !== 'BUYER') {
+       res.status(403).json({ error: 'Only buyers can select bids' });
+       return;
+    }
+
+    // Check if the project exists and belongs to the buyer
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: { bids: true },
+    });
+    if (!project) {
+       res.status(404).json({ error: 'Project not found' });
+       return;
+    }
+    if (project.buyerId !== buyerId) {
+       res.status(403).json({ error: 'You can only select bids for your own projects' });
+       return;
+    }
+
+    // Check if the project is still open
+    if (project.status !== 'OPEN') {
+       res.status(400).json({ error: 'Project is not open for bid selection' });
+       return;
+    }
+
+    // Check if the bid exists and belongs to the project
+    const bid = await prisma.bid.findUnique({
+      where: { id: bidId },
+      include: { seller: true },
+    });
+    if (!bid || bid.projectId !== projectId) {
+       res.status(404).json({ error: 'Bid not found or does not belong to this project' });
+       return
+    }
+
+    // Update the project status and selected bid
+    const updatedProject = await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        status: 'ASSIGNED',
+        selectedBidId: bidId,
+      },
+      include: {
+        buyer: { select: { id: true, name: true, email: true } },
+        selectedBid: {
+          include: { seller: { select: { id: true, name: true, email: true } } },
+        },
+      },
+    });
+
+    // Send email notification to the selected seller
+    const emailSubject = `You've been selected for the project: ${project.title}`;
+    const emailText = `Dear ${bid.seller.name},\n\nCongratulations! Your bid of $${bid.amount} has been selected for the project "${project.title}" by ${user.name} (${user.email}).\n\nPlease get in touch with the buyer to proceed.\n\nBest regards,\nBidding System Team`;
+    await sendEmail(bid.seller.email, emailSubject, emailText);
+
+    res.json({ project: updatedProject });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to select bid' });
   }
 };

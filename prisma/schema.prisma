@@ -12,40 +12,50 @@ model User {
   email     String   @unique
   password  String
   name      String
-  role      Role     @default(BUYER) // Default to BUYER
+  role      Role     @default(BUYER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  projects  Project[] // Projects created by this user (buyer)
-  bids      Bid[]     // Bids placed by this user (seller)
+  projects  Project[]
+  bids      Bid[]
 }
 
 model Project {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String
-  budgetMin   Float
-  budgetMax   Float
-  deadline    DateTime
-  buyerId     Int
-  buyer       User     @relation(fields: [buyerId], references: [id])
-  bids        Bid[]     // Bids placed on this project
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  title         String
+  description   String
+  budgetMin     Float
+  budgetMax     Float
+  deadline      DateTime
+  buyerId       Int
+  buyer         User     @relation(fields: [buyerId], references: [id])
+  bids          Bid[]
+  status        ProjectStatus @default(OPEN)
+  selectedBidId Int?          @unique // Add @unique to ensure one-to-one relation
+  selectedBid   Bid?          @relation("SelectedBid", fields: [selectedBidId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model Bid {
-  id        Int      @id @default(autoincrement())
-  amount    Float
-  message   String?  @default("")
-  projectId Int
-  project   Project  @relation(fields: [projectId], references: [id])
-  sellerId  Int
-  seller    User     @relation(fields: [sellerId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              Int      @id @default(autoincrement())
+  amount          Float
+  message         String?  @default("")
+  projectId       Int
+  project         Project  @relation(fields: [projectId], references: [id])
+  sellerId        Int
+  seller          User     @relation(fields: [sellerId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  selectedProject Project? @relation("SelectedBid") // One-to-one relation with Project
 }
 
 enum Role {
   BUYER
   SELLER
+}
+
+enum ProjectStatus {
+  OPEN
+  ASSIGNED
+  COMPLETED
 }

@@ -221,7 +221,7 @@ Project-Bidding-Backend/
 
 ## Related Repositories
 
-- **Frontend**: [Project-Bidding-Frontend](#) (replace with the actual repo URL)
+- **Frontend**: [Project-Bidding-Frontend](https://github.com/JoyelV/buyers-sellers-management.git) 
 - **Deployed App**:
   - Frontend: [https://bidding-system-frontend.vercel.app/](https://bidding-system-frontend.vercel.app)
   - Backend: [https://project-bidding-backend-e8985cdcf68d.herokuapp.com](https://project-bidding-backend-e8985cdcf68d.herokuapp.com)

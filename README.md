@@ -42,6 +42,7 @@ The backend was designed with scalability and security in mind:
 - **Error Handling**: Added proper error responses and logging for debugging.
 
 ## Project Structure
+```
 Project-Bidding-Backend/
 ├── prisma/
 │   ├── migrations/                # Prisma migration files (generated automatically)

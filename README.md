@@ -42,21 +42,29 @@ The backend was designed with scalability and security in mind:
 - **Error Handling**: Added proper error responses and logging for debugging.
 
 ## Project Structure
-```
-.
+Project-Bidding-Backend/
 ├── prisma/
-│   └── schema.prisma       # Prisma schema (database models)
+│   ├── migrations/                # Prisma migration files (generated automatically)
+│   └── schema.prisma              # Prisma schema (database models: User, Project, Bid)
 ├── src/
-│   ├── config/
-│   │   └── email.js       # Email configuration (Nodemailer setup)
-│   ├── routes/ 
-│   │   ├── projects.js    # Project-related routes,Bid-related routes (create, fetch, select),Notification routes (send emails tosellers)
-│   │   └── users.js       # User-related routes (auth)
-│   └── index.js           # Main Express app (entry point)
-├── package.json           # Dependencies and scripts
-└── README.md              # This file
+│   ├── utils/
+│   │   └── email.js               # Email configuration (Nodemailer setup with SendGrid)
+|   |   └── cloudinary.js          # Cloudinary configuration (For Uploading pdf files as deliverables)
+│   ├── controllers/
+│   │   └── project.js             # Controller functions for projects, bids, and notifications
+|   |   └── auth.js                # Controller functions for authentication (register, login)
+│   ├── middleware/
+│   │   ├── auth.js                # Authentication middleware (JWT validation)
+│   │   └── fileUpload.js          # Middleware for handling file uploads (for deliverables)
+│   ├── routes/
+│   │   ├── project.js             # Routes for projects, bids, and notifications
+│   │   └── auth.js                # Routes for user authentication (register, login)
+|   └── types/
+|   |   └── express.d.js           # A TypeScript declaration file providing type definitions for Express    
+│   └── index.js                   # Main Express app (entry point)
+├── package.json                   # Dependencies and scripts
+└── README.md                      # Project documentation
 ```
-
 ## Setup Instructions
 
 ### Prerequisites

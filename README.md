@@ -43,7 +43,7 @@ The backend was designed with scalability and security in mind:
 
 - **RESTful API**: Structured endpoints for users, projects, bids, and notifications.
 - **Database Design**: Used Prisma to define models (`User`, `Project`, `Bid`) with relationships.
-- **Email Notifications**: Integrated Nodemailer with SendGrid for automated emails (e.g., bid selection notifications).
+- **Email Notifications**: Integrated Nodemailer with GMAIL SMTP for automated emails (e.g., bid selection notifications).
 - **Authentication**: Implemented JWT-based authentication with role-based access control.
 - **Error Handling**: Added proper error responses and logging for debugging.
 
@@ -182,7 +182,7 @@ Project-Bidding-Backend/
 ### Environment Variables
 
 | Variable              | Description                                | Example Value                                         |
-| --------------------- | ------------------------------------------ | ----------------------------------------------------- | --- |
+|:----------------------|:-------------------------------------------|:------------------------------------------------------|
 | `PORT`                | Port for the server                        | `5000`                                                |
 | `DATABASE_URL`        | Postgres database URL (auto-set by Heroku) | `postgres://<user>:<password>@<host>:<port>/<dbname>` |
 | `JWT_SECRET`          | Secret for JWT signing                     | `<your-jwt-secret>`                                   |
@@ -191,7 +191,7 @@ Project-Bidding-Backend/
 | `EMAIL_PORT`          | SMTP port                                  | `587`                                                 |
 | `EMAIL_USE_TLS`       | Enable TLS for email                       | `true`                                                |
 | `EMAIL_HOST_USER`     | Gmail email address                        | `your.email@gmail.com`                                |
-| `EMAIL_HOST_PASSWORD` | Gmail App Password                         | `<your-gmail-app-password>`                           |     |
+| `EMAIL_HOST_PASSWORD` | Gmail App Password                         | `<your-gmail-app-password>`                           |                       |     |
 
 ## API Endpoints
 
